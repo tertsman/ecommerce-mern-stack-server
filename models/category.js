@@ -15,7 +15,4 @@ const categorySchema = mongoose.Schema({
   }
 });
 
-// ✅ Capitalize model name: 'Category'
-// ✅ Use module.exports (more common)
-// module.exports = mongoose.model('Category', categorySchema);
 exports.Category = mongoose.model("Category", categorySchema);

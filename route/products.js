@@ -9,17 +9,46 @@ cloudinary.config({
   api_key: process.env.Cloudinary_Config_api_key,
   api_secret: process.env.Cloudinary_Config_api_secret,
 });
-// get all product 
+
+
 router.get("/", async (req, res) => {
-  const productList = await Products.find().populate("category");
-  if (!productList) {
+
+  const isFeatured = req.query.isFeatured;
+  let filter = {};
+
+  if (isFeatured === "true") {
+    filter.isFeatured = true;
+  }
+
+  try {
+    // ✅ Filter by isFeatured if query exists
+    const productList = await Products.find(filter).populate("category");
+    if (!productList) {
+      return res.status(500).json({
+        success: false,
+        message: "Products not found",
+      });
+    }
+
+    return res.status(200).json(productList);
+  } catch (err) {
+    console.error("Server error:", err);
     return res.status(500).json({
       success: false,
+      message: "Server error",
     });
-  } else {
-    return res.send(productList);
   }
 });
+
+router.get('/category/:categoryId', async (req, res) => {
+  try {
+    const products = await Products.find({ category: req.params.categoryId }).populate('category');
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+});
+
 // get product 1
 router.get("/:id", async (req, res) => {
   const {id} = req.params
@@ -74,7 +103,6 @@ router.post("/create", upload.array("images", 10), async (req, res) => {
       colors: req.body.colors,   // <-- បញ្ចូល colors array
   weights: req.body.weights, // <-- បញ្ចូល weights array
   sizes: req.body.sizes, 
- 
       dateCreated: req.body.dateCreated || new Date(),
     });
 
@@ -111,10 +139,10 @@ router.put("/:id", upload.array("images", 10), async (req, res) => {
       );
     }
 
-    // 🟢 Final image list = existing + newly uploaded
+    //  Final image list = existing + newly uploaded
     const finalImageList = [...existingImages, ...newImageUrls];
 
-    // 🔁 Update product
+    //  Update product
     const updatedProduct = await Products.findByIdAndUpdate(
       req.params.id,
       {
@@ -130,9 +158,9 @@ router.put("/:id", upload.array("images", 10), async (req, res) => {
         numReviews: req.body.numReviews,
         isFeatured: req.body.isFeatured,
         take:req.body.take,
-           colors: req.body.colors,   // <-- បញ្ចូល colors array
-  weights: req.body.weights, // <-- បញ្ចូល weights array
-  sizes: req.body.sizes,
+        colors: req.body.colors,   // <-- បញ្ចូល colors array
+        weights: req.body.weights, // <-- បញ្ចូល weights array
+        sizes: req.body.sizes,
         dateCreated: req.body.dateCreated || new Date(),
       },
       { new: true }
@@ -157,18 +185,51 @@ router.put("/:id", upload.array("images", 10), async (req, res) => {
 });
 
 
+// router.delete("/:id", async (req, res) => {
+//   const deletedUser = await Products.findByIdAndDelete(req.params.id);
+//   if (!deletedUser) {
+//     return res.status(404).json({
+//       message: "product Not Found!",
+//       success: false,
+//     });
+//   }
+//   res.status(200).json({
+//     success: true,
+//     message: "Product Deleted!",
+//   });
+// });
+
 router.delete("/:id", async (req, res) => {
-  const deletedUser = await Products.findByIdAndDelete(req.params.id);
-  if (!deletedUser) {
-    return res.status(404).json({
-      message: "Category Not Found!",
+  const { id } = req.params;
+
+  // validate ObjectId
+  if (!id || id === "undefined") {
+    return res.status(400).json({
       success: false,
+      message: "Invalid Product ID",
     });
   }
-  res.status(200).json({
-    success: true,
-    message: "Product Deleted!",
-  });
+
+  try {
+    const deletedUser = await Products.findByIdAndDelete(id);
+    if (!deletedUser) {
+      return res.status(404).json({
+        message: "Product Not Found!",
+        success: false,
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Product Deleted!",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
+  }
 });
+
 
 module.exports = router;
